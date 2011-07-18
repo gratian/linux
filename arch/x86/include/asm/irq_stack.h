@@ -215,6 +215,8 @@
 	__this_cpu_write(hardirq_stack_inuse, false);			\
 }
 
+#endif
+
 #else /* CONFIG_X86_64 */
 /* System vector handlers always run on the stack they interrupted. */
 #define run_sysvec_on_irqstack_cond(func, regs)				\
