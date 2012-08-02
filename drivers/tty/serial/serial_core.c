@@ -234,6 +234,10 @@ static int uart_port_startup(struct tty_struct *tty, struct uart_state *state,
 		 */
 		uart_change_speed(tty, state, NULL);
 
+		/* Enable Transceivers */
+		if (uport->txvr_ops && uport->txvr_ops->enable_transceivers)
+			uport->txvr_ops->enable_transceivers(uport);
+
 		/*
 		 * Setup the RTS and DTR signals once the
 		 * port is open and ready to respond.
@@ -1842,6 +1846,10 @@ static void uart_port_shutdown(struct tty_port *port)
 {
 	struct uart_state *state = container_of(port, struct uart_state, port);
 	struct uart_port *uport = uart_port_check(state);
+
+	/* Disable Transceivers */
+	if (uport->txvr_ops && uport->txvr_ops->disable_transceivers)
+		uport->txvr_ops->disable_transceivers(uport);
 
 	/*
 	 * clear delta_msr_wait queue to avoid mem leaks: we may free
