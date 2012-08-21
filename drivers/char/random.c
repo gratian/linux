@@ -718,21 +718,35 @@ static void __cold _credit_init_bits(size_t bits)
 		new = min_t(unsigned int, POOL_BITS, orig + add);
 	} while (cmpxchg(&input_pool.init_bits, orig, new) != orig);
 
-	if (orig < POOL_READY_BITS && new >= POOL_READY_BITS) {
-		crng_reseed(); /* Sets crng_init to CRNG_READY under base_crng.lock. */
-		process_random_ready_list();
-		wake_up_interruptible(&crng_init_wait);
-		kill_fasync(&fasync, SIGIO, POLL_IN);
-		pr_notice("crng init done\n");
-		if (urandom_warning.missed)
-			pr_notice("%d urandom warning(s) missed due to ratelimiting\n",
-				  urandom_warning.missed);
-	} else if (orig < POOL_EARLY_BITS && new >= POOL_EARLY_BITS) {
-		spin_lock_irqsave(&base_crng.lock, flags);
-		/* Check if crng_init is CRNG_EMPTY, to avoid race with crng_reseed(). */
-		if (crng_init == CRNG_EMPTY) {
-			extract_entropy(base_crng.key, sizeof(base_crng.key));
-			crng_init = CRNG_EARLY;
+void add_interrupt_randomness(int irq, int irq_flags, __u64 ip)
+{
+	struct entropy_store	*r;
+	struct fast_pool	*fast_pool = this_cpu_ptr(&irq_randomness);
+	unsigned long		now = jiffies;
+	cycles_t		cycles = random_get_entropy();
+	__u32			c_high, j_high;
+
+	if (cycles == 0)
+		cycles = get_reg(fast_pool, NULL);
+	c_high = (sizeof(cycles) > 4) ? cycles >> 32 : 0;
+	j_high = (sizeof(now) > 4) ? now >> 32 : 0;
+	fast_pool->pool[0] ^= cycles ^ j_high ^ irq;
+	fast_pool->pool[1] ^= now ^ c_high;
+	if (!ip)
+		ip = _RET_IP_;
+	fast_pool->pool[2] ^= ip;
+	fast_pool->pool[3] ^= (sizeof(ip) > 4) ? ip >> 32 :
+		get_reg(fast_pool, NULL);
+
+	fast_mix(fast_pool);
+	add_interrupt_bench(cycles);
+
+	if (unlikely(crng_init == 0)) {
+		if ((fast_pool->count >= 64) &&
+		    crng_fast_load((char *) fast_pool->pool,
+				   sizeof(fast_pool->pool))) {
+			fast_pool->count = 0;
+			fast_pool->last = now;
 		}
 		spin_unlock_irqrestore(&base_crng.lock, flags);
 	}
