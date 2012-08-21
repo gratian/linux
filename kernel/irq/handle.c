@@ -190,8 +190,10 @@ irqreturn_t __handle_irq_event_percpu(struct irq_desc *desc, unsigned int *flags
 
 irqreturn_t handle_irq_event_percpu(struct irq_desc *desc)
 {
-	irqreturn_t retval;
+	struct pt_regs *regs = get_irq_regs();
+	u64 ip = regs ? instruction_pointer(regs) : 0;
 	unsigned int flags = 0;
+	irqreturn_t retval;
 
 	retval = __handle_irq_event_percpu(desc, &flags);
 
