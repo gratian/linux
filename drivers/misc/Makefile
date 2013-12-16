@@ -58,3 +58,4 @@ obj-$(CONFIG_HABANA_AI)		+= habanalabs/
 obj-$(CONFIG_UACCE)		+= uacce/
 obj-$(CONFIG_XILINX_SDFEC)	+= xilinx_sdfec.o
 obj-$(CONFIG_NI_RT_FEATURES)	+= nirtfeatures.o
+obj-$(CONFIG_NI_WATCHDOG)	+= niwatchdog.o
