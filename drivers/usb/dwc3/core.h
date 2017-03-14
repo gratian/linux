@@ -1298,6 +1298,8 @@ struct dwc3 {
 	unsigned		async_callbacks:1;
 	unsigned		suspended:1;
 
+	unsigned		has_dsm_for_softreset:1;
+
 	u16			imod_interval;
 
 	int			max_cfg_eps;
