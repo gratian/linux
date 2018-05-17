@@ -1178,6 +1178,9 @@ static int byt_sd_probe_slot(struct sdhci_pci_slot *slot)
 		slot->host->mmc->caps2 |= MMC_CAP2_AVOID_3_3V;
 
 	byt_needs_pwr_off(slot);
+	if (slot->chip->pdev->device == PCI_DEVICE_ID_INTEL_BYT_SD)
+		slot->host->quirks2 |= SDHCI_QUIRK2_NEED_DELAY_AFTER_CLK_DISABLE |
+				       SDHCI_QUIRK2_SPURIOUS_CARD_INSERT_INTERRUPT;
 
 	return 0;
 }
