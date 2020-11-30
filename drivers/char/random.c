@@ -873,12 +873,17 @@ void add_hwgenerator_randomness(const void *buf, size_t len, size_t entropy)
 	mix_pool_bytes(buf, len);
 	credit_init_bits(entropy);
 
-	/*
-	 * Throttle writing to once every CRNG_RESEED_INTERVAL, unless
-	 * we're not yet initialized.
-	 */
-	if (!kthread_should_stop() && crng_ready())
-		schedule_timeout_interruptible(CRNG_RESEED_INTERVAL);
+	if (print_once ||
+	    crng_ready() ||
+	    (previous && (caller == READ_ONCE(*previous))))
+		return;
+	WRITE_ONCE(*previous, caller);
+#ifndef CONFIG_WARN_ALL_UNSEEDED_RANDOM
+	print_once = true;
+#endif
+	if (__ratelimit(&unseeded_warning))
+		pr_notice("random: %s called from %pS with crng_init=%d\n",
+			  func_name, caller, crng_init);
 }
 EXPORT_SYMBOL_GPL(add_hwgenerator_randomness);
 
