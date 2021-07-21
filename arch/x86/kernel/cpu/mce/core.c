@@ -742,6 +742,7 @@ bool machine_check_poll(enum mcp_flags flags, mce_banks_t *b)
 	struct mce m;
 	int i;
 
+	trace_mce_func(__FUNCTION__, __LINE__);
 	this_cpu_inc(mce_poll_count);
 
 	mce_gather_info(&m, NULL);
@@ -832,6 +833,8 @@ clear_it:
 	 */
 
 	sync_core();
+
+	trace_mce_func(__FUNCTION__, __LINE__);
 
 	return error_seen;
 }
@@ -1497,6 +1500,7 @@ static void mce_timer_fn(struct timer_list *t)
 	struct timer_list *cpu_t = this_cpu_ptr(&mce_timer);
 	unsigned long iv;
 
+	trace_mce_func(__FUNCTION__, __LINE__);
 	WARN_ON(cpu_t != t);
 
 	iv = __this_cpu_read(mce_next_interval);
@@ -1522,6 +1526,7 @@ static void mce_timer_fn(struct timer_list *t)
 done:
 	__this_cpu_write(mce_next_interval, iv);
 	__start_timer(t, iv);
+	trace_mce_func(__FUNCTION__, __LINE__);
 }
 
 /*

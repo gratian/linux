@@ -9,6 +9,25 @@
 #include <linux/tracepoint.h>
 #include <asm/mce.h>
 
+TRACE_EVENT(mce_func,
+
+	TP_PROTO(const char *func, int line),
+
+	TP_ARGS(func, line),
+
+	TP_STRUCT__entry(
+		__string(	name,	func	)
+		__field(	int,	line	)
+	),
+
+	TP_fast_assign(
+		__entry->line = line;
+		__assign_str(name, func);
+	),
+
+	TP_printk("%s:%d", __get_str(name), __entry->line)
+);
+
 TRACE_EVENT(mce_record,
 
 	TP_PROTO(struct mce *m),
