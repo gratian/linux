@@ -155,8 +155,10 @@ EXPORT_PER_CPU_SYMBOL_GPL(injectm);
 
 void mce_log(struct mce *m)
 {
+	trace_mce_func(__FUNCTION__, __LINE__);
 	if (!mce_gen_pool_add(m))
 		irq_work_queue(&mce_irq_work);
+	trace_mce_func(__FUNCTION__, __LINE__);
 }
 EXPORT_SYMBOL_GPL(mce_log);
 
@@ -395,6 +397,7 @@ __visible bool ex_handler_rdmsr_fault(const struct exception_table_entry *fixup,
 static noinstr u64 mce_rdmsrl(u32 msr)
 {
 	DECLARE_ARGS(val, low, high);
+	trace_mce_func_rdmsrl(__FUNCTION__, __LINE__, msr);
 
 	if (__this_cpu_read(injectm.finished)) {
 		int offset;
@@ -409,7 +412,7 @@ static noinstr u64 mce_rdmsrl(u32 msr)
 			ret = *(u64 *)((char *)this_cpu_ptr(&injectm) + offset);
 
 		instrumentation_end();
-
+		trace_mce_func(__FUNCTION__, __LINE__);
 		return ret;
 	}
 
@@ -423,7 +426,7 @@ static noinstr u64 mce_rdmsrl(u32 msr)
 		     _ASM_EXTABLE_HANDLE(1b, 2b, ex_handler_rdmsr_fault)
 		     : EAX_EDX_RET(val, low, high) : "c" (msr));
 
-
+	trace_mce_func(__FUNCTION__, __LINE__);
 	return EAX_EDX_VAL(val, low, high);
 }
 
@@ -450,6 +453,7 @@ static noinstr void mce_wrmsrl(u32 msr, u64 v)
 {
 	u32 low, high;
 
+	trace_mce_func(__FUNCTION__, __LINE__);
 	if (__this_cpu_read(injectm.finished)) {
 		int offset;
 
@@ -460,7 +464,7 @@ static noinstr void mce_wrmsrl(u32 msr, u64 v)
 			*(u64 *)((char *)this_cpu_ptr(&injectm) + offset) = v;
 
 		instrumentation_end();
-
+		trace_mce_func(__FUNCTION__, __LINE__);
 		return;
 	}
 
@@ -472,6 +476,7 @@ static noinstr void mce_wrmsrl(u32 msr, u64 v)
 		     "2:\n"
 		     _ASM_EXTABLE_HANDLE(1b, 2b, ex_handler_wrmsr_fault)
 		     : : "c" (msr), "a"(low), "d" (high) : "memory");
+	trace_mce_func(__FUNCTION__, __LINE__);
 }
 
 /*
@@ -481,7 +486,9 @@ static noinstr void mce_wrmsrl(u32 msr, u64 v)
  */
 static inline void mce_gather_info(struct mce *m, struct pt_regs *regs)
 {
+	trace_mce_func(__FUNCTION__, __LINE__);
 	mce_setup(m);
+	trace_mce_func(__FUNCTION__, __LINE__);
 
 	m->mcgstatus = mce_rdmsrl(MSR_IA32_MCG_STATUS);
 	if (regs) {
@@ -505,6 +512,7 @@ static inline void mce_gather_info(struct mce *m, struct pt_regs *regs)
 		if (mca_cfg.rip_msr)
 			m->ip = mce_rdmsrl(mca_cfg.rip_msr);
 	}
+	trace_mce_func(__FUNCTION__, __LINE__);
 }
 
 int mce_available(struct cpuinfo_x86 *c)
@@ -684,6 +692,8 @@ static struct notifier_block mce_default_nb = {
  */
 static void mce_read_aux(struct mce *m, int i)
 {
+	trace_mce_func(__FUNCTION__, __LINE__);
+
 	if (m->status & MCI_STATUS_MISCV)
 		m->misc = mce_rdmsrl(msr_ops.misc(i));
 
@@ -716,6 +726,8 @@ static void mce_read_aux(struct mce *m, int i)
 		if (m->status & MCI_STATUS_SYNDV)
 			m->synd = mce_rdmsrl(MSR_AMD64_SMCA_MCx_SYND(i));
 	}
+
+	trace_mce_func(__FUNCTION__, __LINE__);
 }
 
 DEFINE_PER_CPU(unsigned, mce_poll_count);
@@ -749,6 +761,8 @@ bool machine_check_poll(enum mcp_flags flags, mce_banks_t *b)
 
 	if (flags & MCP_TIMESTAMP)
 		m.tsc = rdtsc();
+
+	trace_mce_func(__FUNCTION__, __LINE__);
 
 	for (i = 0; i < this_cpu_read(mce_num_banks); i++) {
 		if (!mce_banks[i].ctl || !test_bit(i, *b))
@@ -826,6 +840,8 @@ clear_it:
 		 */
 		mce_wrmsrl(msr_ops.status(i), 0);
 	}
+
+	trace_mce_func(__FUNCTION__, __LINE__);
 
 	/*
 	 * Don't clear MCG_STATUS here because it's only defined for
