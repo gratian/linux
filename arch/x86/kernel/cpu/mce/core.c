@@ -764,7 +764,7 @@ bool machine_check_poll(enum mcp_flags flags, mce_banks_t *b)
 
 	trace_mce_func(__FUNCTION__, __LINE__);
 
-	for (i = 0; i < this_cpu_read(mce_num_banks); i++) {
+	for (i = 0; i < this_cpu_read(mce_num_banks) - 1; i++) {
 		if (!mce_banks[i].ctl || !test_bit(i, *b))
 			continue;
 
