@@ -28,7 +28,7 @@ TRACE_EVENT(mce_func,
 	TP_printk("%s:%d", __get_str(name), __entry->line)
 );
 
-TRACE_EVENT(mce_func_rdmsrl,
+TRACE_EVENT(mce_func_msrl,
 
 	TP_PROTO(const char *func, int line, u32 msr),
 
@@ -47,6 +47,29 @@ TRACE_EVENT(mce_func_rdmsrl,
 	),
 
 	TP_printk("%s:%d msr:0x%x", __get_str(name), __entry->line, __entry->msr)
+);
+
+TRACE_EVENT(mce_func_msrl_ret,
+
+	TP_PROTO(const char *func, int line, u32 msr, u64 val),
+
+	TP_ARGS(func, line, msr, val),
+
+	TP_STRUCT__entry(
+		__string(	name,	func	)
+		__field(	int,	line	)
+		__field(	u32,	msr	)
+		__field(	u64,	val	)
+	),
+
+	TP_fast_assign(
+		__assign_str(name, func);
+		__entry->line = line;
+		__entry->msr = msr;
+		__entry->val = val;
+	),
+
+	TP_printk("%s:%d msr:0x%x val:0x%llx", __get_str(name), __entry->line, __entry->msr, __entry->val)
 );
 
 TRACE_EVENT(mce_record,

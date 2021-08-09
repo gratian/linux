@@ -397,7 +397,7 @@ __visible bool ex_handler_rdmsr_fault(const struct exception_table_entry *fixup,
 static noinstr u64 mce_rdmsrl(u32 msr)
 {
 	DECLARE_ARGS(val, low, high);
-	trace_mce_func_rdmsrl(__FUNCTION__, __LINE__, msr);
+	trace_mce_func_msrl(__FUNCTION__, __LINE__, msr);
 
 	if (__this_cpu_read(injectm.finished)) {
 		int offset;
@@ -426,7 +426,7 @@ static noinstr u64 mce_rdmsrl(u32 msr)
 		     _ASM_EXTABLE_HANDLE(1b, 2b, ex_handler_rdmsr_fault)
 		     : EAX_EDX_RET(val, low, high) : "c" (msr));
 
-	trace_mce_func(__FUNCTION__, __LINE__);
+	trace_mce_func_msrl_ret(__FUNCTION__, __LINE__, msr, EAX_EDX_VAL(val, low, high));
 	return EAX_EDX_VAL(val, low, high);
 }
 
@@ -453,7 +453,7 @@ static noinstr void mce_wrmsrl(u32 msr, u64 v)
 {
 	u32 low, high;
 
-	trace_mce_func(__FUNCTION__, __LINE__);
+	trace_mce_func_msrl(__FUNCTION__, __LINE__, msr);
 	if (__this_cpu_read(injectm.finished)) {
 		int offset;
 
@@ -476,7 +476,7 @@ static noinstr void mce_wrmsrl(u32 msr, u64 v)
 		     "2:\n"
 		     _ASM_EXTABLE_HANDLE(1b, 2b, ex_handler_wrmsr_fault)
 		     : : "c" (msr), "a"(low), "d" (high) : "memory");
-	trace_mce_func(__FUNCTION__, __LINE__);
+	trace_mce_func_msrl_ret(__FUNCTION__, __LINE__, msr, v);
 }
 
 /*
