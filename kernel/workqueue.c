@@ -4828,19 +4828,54 @@ void show_one_workqueue(struct workqueue_struct *wq)
 
 	pr_info("workqueue %s: flags=0x%x\n", wq->name, wq->flags);
 
-	for_each_pwq(pwq, wq) {
-		raw_spin_lock_irqsave(&pwq->pool->lock, flags);
-		if (pwq->nr_active || !list_empty(&pwq->inactive_works)) {
+		for_each_pwq(pwq, wq) {
+			raw_spin_lock_irqsave(&pwq->pool->lock, flags);
+			if (pwq->nr_active || !list_empty(&pwq->inactive_works)) {
+				/*
+				 * Defer printing to avoid deadlocks in console
+				 * drivers that queue work while holding locks
+				 * also taken in their write paths.
+				 */
+				show_pwq(pwq);
+			}
+			raw_spin_unlock_irqrestore(&pwq->pool->lock, flags);
 			/*
 			 * Defer printing to avoid deadlocks in console
 			 * drivers that queue work while holding locks
 			 * also taken in their write paths.
 			 */
-			printk_deferred_enter();
-			show_pwq(pwq);
-			printk_deferred_exit();
+			touch_nmi_watchdog();
 		}
-		raw_spin_unlock_irqrestore(&pwq->pool->lock, flags);
+	}
+
+	for_each_pool(pool, pi) {
+		struct worker *worker;
+		bool first = true;
+
+		raw_spin_lock_irqsave(&pool->lock, flags);
+		if (pool->nr_workers == pool->nr_idle)
+			goto next_pool;
+		/*
+		 * Defer printing to avoid deadlocks in console drivers that
+		 * queue work while holding locks also taken in their write
+		 * paths.
+		 */
+		pr_info("pool %d:", pool->id);
+		pr_cont_pool_info(pool);
+		pr_cont(" hung=%us workers=%d",
+			jiffies_to_msecs(jiffies - pool->watchdog_ts) / 1000,
+			pool->nr_workers);
+		if (pool->manager)
+			pr_cont(" manager: %d",
+				task_pid_nr(pool->manager->task));
+		list_for_each_entry(worker, &pool->idle_list, entry) {
+			pr_cont(" %s%d", first ? "idle: " : "",
+				task_pid_nr(worker->task));
+			first = false;
+		}
+		pr_cont("\n");
+	next_pool:
+		raw_spin_unlock_irqrestore(&pool->lock, flags);
 		/*
 		 * We could be printing a lot from atomic context, e.g.
 		 * sysrq-t -> show_all_workqueues(). Avoid triggering
