@@ -583,25 +583,12 @@ static int mqprio_dump_class_stats(struct Qdisc *sch, unsigned long cl,
 
 			spin_lock_bh(qdisc_lock(qdisc));
 
-			if (qdisc_is_percpu_stats(qdisc)) {
-				qlen = qdisc_qlen_sum(qdisc);
+			gnet_stats_add_basic(&bstats, qdisc->cpu_bstats,
+					     &qdisc->bstats, false);
+			gnet_stats_add_queue(&qstats, qdisc->cpu_qstats,
+					     &qdisc->qstats);
+			sch->q.qlen += qdisc_qlen(qdisc);
 
-				__gnet_stats_copy_basic(NULL, &bstats,
-							qdisc->cpu_bstats,
-							&qdisc->bstats);
-				__gnet_stats_copy_queue(&qstats,
-							qdisc->cpu_qstats,
-							&qdisc->qstats,
-							qlen);
-			} else {
-				qlen		+= qdisc->q.qlen;
-				bstats.bytes	+= qdisc->bstats.bytes;
-				bstats.packets	+= qdisc->bstats.packets;
-				qstats.backlog	+= qdisc->qstats.backlog;
-				qstats.drops	+= qdisc->qstats.drops;
-				qstats.requeues	+= qdisc->qstats.requeues;
-				qstats.overlimits += qdisc->qstats.overlimits;
-			}
 			spin_unlock_bh(qdisc_lock(qdisc));
 		}
 		qlen = qdisc_qlen(sch) + qstats.qlen;
