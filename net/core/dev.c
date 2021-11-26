@@ -383,13 +383,11 @@ static void unlist_netdevice(struct net_device *dev, bool lock)
 	ASSERT_RTNL();
 
 	/* Unlink dev from the device chain */
-	if (lock)
-		write_lock(&dev_base_lock);
+	write_lock(&dev_base_lock);
 	list_del_rcu(&dev->dev_list);
 	netdev_name_node_del(dev->name_node);
 	hlist_del_rcu(&dev->index_hlist);
-	if (lock)
-		write_unlock(&dev_base_lock);
+	write_unlock(&dev_base_lock);
 
 	dev_base_seq_inc(dev_net(dev));
 }
