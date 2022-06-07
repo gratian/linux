@@ -375,6 +375,10 @@ static inline void sched_core_dequeue(struct rq *rq, struct task_struct *p) { }
  */
 int sysctl_sched_rt_runtime = 950000;
 
+/*
+ * send a signal if throttling is engaged (0 = nothing, 11 = SIGSEGV, etc)
+ */
+int sysctl_sched_rt_throttle_signal = 0;
 
 /*
  * Serialization rules:
