@@ -2785,8 +2785,8 @@ static inline void __d_add(struct dentry *dentry, struct inode *inode)
 {
 	wait_queue_head_t *d_wait;
 	struct inode *dir = NULL;
-
 	unsigned n;
+
 	spin_lock(&dentry->d_lock);
 	if (unlikely(d_in_lookup(dentry))) {
 		dir = dentry->d_parent->d_inode;
@@ -2802,11 +2802,11 @@ static inline void __d_add(struct dentry *dentry, struct inode *inode)
 		fsnotify_update_flags(dentry);
 	}
 	__d_rehash(dentry);
-	if (dir)
+	if (dir) {
 		end_dir_add(dir, n, d_wait);
-	spin_unlock(&dentry->d_lock);
-	if (d_wait)
 		wake_up_all(d_wait);
+	}
+	spin_unlock(&dentry->d_lock);
 	if (inode)
 		spin_unlock(&inode->i_lock);
 }
@@ -2951,7 +2951,6 @@ static void copy_name(struct dentry *dentry, struct dentry *target)
 static void __d_move(struct dentry *dentry, struct dentry *target,
 		     bool exchange)
 {
-	wait_queue_head_t *d_wait = NULL;
 	struct dentry *old_parent, *p;
 	wait_queue_head_t *d_wait;
 	struct inode *dir = NULL;
@@ -3028,8 +3027,6 @@ static void __d_move(struct dentry *dentry, struct dentry *target,
 		spin_unlock(&old_parent->d_lock);
 	spin_unlock(&target->d_lock);
 	spin_unlock(&dentry->d_lock);
-	if (d_wait)
-		wake_up_all(d_wait);
 }
 
 /*
