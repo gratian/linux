@@ -514,7 +514,10 @@ serial_pnp_probe(struct pnp_dev *dev, const struct pnp_device_id *dev_id)
 			 * with prescaler 1.125.
 			 */
 			uart.port.uartclk = 22222222;
+#if 0
+			/** @todo: gratian: deal with mcr_force being removed */
 			uart.mcr_force = UART_MCR_CLKSEL;
+#endif
 			ni16550_config_prescaler(uart.port.iobase, 0x9);
 		}
 
@@ -526,7 +529,10 @@ serial_pnp_probe(struct pnp_dev *dev, const struct pnp_device_id *dev_id)
 			 * with prescaler 1.125.
 			 */
 			uart.port.uartclk = 29629629;
+#if 0
+			/** @todo: gratian: deal with mcr_force being removed */
 			uart.mcr_force = UART_MCR_CLKSEL;
+#endif
 			ni16550_config_prescaler(uart.port.iobase, 0x9);
 
 			if (device_property_read_string(&dev->dev,
