@@ -2239,6 +2239,7 @@ struct dentry *d_add_ci(struct dentry *dentry, struct inode *inode,
 		} 
 	}
 	res = d_splice_alias(inode, found);
+	d_lookup_done(found);
 	if (res) {
 		d_lookup_done(found);
 		dput(found);
@@ -2786,7 +2787,6 @@ static inline void __d_add(struct dentry *dentry, struct inode *inode)
 	wait_queue_head_t *d_wait;
 	struct inode *dir = NULL;
 	unsigned n;
-
 	spin_lock(&dentry->d_lock);
 	if (unlikely(d_in_lookup(dentry))) {
 		dir = dentry->d_parent->d_inode;
@@ -2802,10 +2802,8 @@ static inline void __d_add(struct dentry *dentry, struct inode *inode)
 		fsnotify_update_flags(dentry);
 	}
 	__d_rehash(dentry);
-	if (dir) {
+	if (dir)
 		end_dir_add(dir, n, d_wait);
-		wake_up_all(d_wait);
-	}
 	spin_unlock(&dentry->d_lock);
 	if (inode)
 		spin_unlock(&inode->i_lock);
