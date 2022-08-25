@@ -16,7 +16,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/platform_device.h>
 #include <linux/gpio/consumer.h>
-#include <linux/gpio/machine.h>
 #include <linux/acpi.h>
 #include <linux/delay.h>
 
@@ -86,15 +85,6 @@ static const struct acpi_gpio_mapping acpi_dwc3_byt_gpios[] = {
 	{ "reset-gpios", &reset_gpios, 1 },
 	{ "cs-gpios", &cs_gpios, 1 },
 	{ },
-};
-
-static struct gpiod_lookup_table platform_bytcr_gpios = {
-	.dev_id		= "0000:00:16.0",
-	.table		= {
-		GPIO_LOOKUP("INT33FC:00", 54, "cs", GPIO_ACTIVE_HIGH),
-		GPIO_LOOKUP("INT33FC:02", 14, "reset", GPIO_ACTIVE_HIGH),
-		{}
-	},
 };
 
 static int dwc3_byt_enable_ulpi_refclock(struct pci_dev *pci)
@@ -354,7 +344,6 @@ static void dwc3_pci_remove(struct pci_dev *pci)
 {
 	struct dwc3_pci		*dwc = pci_get_drvdata(pci);
 
-	gpiod_remove_lookup_table(&platform_bytcr_gpios);
 #ifdef CONFIG_PM
 	cancel_work_sync(&dwc->wakeup_work);
 #endif
