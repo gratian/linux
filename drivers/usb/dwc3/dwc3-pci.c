@@ -16,7 +16,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/platform_device.h>
 #include <linux/gpio/consumer.h>
-#include <linux/gpio/machine.h>
 #include <linux/acpi.h>
 #include <linux/delay.h>
 
@@ -86,15 +85,6 @@ static const struct acpi_gpio_mapping acpi_dwc3_byt_gpios[] = {
 	{ "reset-gpios", &reset_gpios, 1 },
 	{ "cs-gpios", &cs_gpios, 1 },
 	{ },
-};
-
-static struct gpiod_lookup_table platform_bytcr_gpios = {
-	.dev_id		= "0000:00:16.0",
-	.table		= {
-		GPIO_LOOKUP("INT33FC:00", 54, "cs", GPIO_ACTIVE_HIGH),
-		GPIO_LOOKUP("INT33FC:02", 14, "reset", GPIO_ACTIVE_HIGH),
-		{}
-	},
 };
 
 static int dwc3_byt_enable_ulpi_refclock(struct pci_dev *pci)
@@ -229,15 +219,6 @@ static int dwc3_pci_quirks(struct dwc3_pci *dwc,
 				dev_dbg(&pdev->dev, "failed to add mapping table\n");
 
 			/*
-			 * A lot of BYT devices lack ACPI resource entries for
-			 * the GPIOs. If the ACPI entry for the GPIO controller
-			 * is present add a fallback mapping to the reference
-			 * design GPIOs which all boards seem to use.
-			 */
-			if (acpi_dev_present("INT33FC", NULL, -1))
-				gpiod_add_lookup_table(&platform_bytcr_gpios);
-
-			/*
 			 * These GPIOs will turn on the USB2 PHY. Note that we have to
 			 * put the gpio descriptors again here because the phy driver
 			 * might want to grab them, too.
@@ -354,7 +335,6 @@ static void dwc3_pci_remove(struct pci_dev *pci)
 {
 	struct dwc3_pci		*dwc = pci_get_drvdata(pci);
 
-	gpiod_remove_lookup_table(&platform_bytcr_gpios);
 #ifdef CONFIG_PM
 	cancel_work_sync(&dwc->wakeup_work);
 #endif
