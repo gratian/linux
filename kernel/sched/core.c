@@ -3025,8 +3025,9 @@ void force_compatible_cpus_allowed_ptr(struct task_struct *p)
 
 out_set_mask:
 	if (printk_ratelimit()) {
-		printk("Overriding affinity for process %d (%s) to CPUs %*pbl\n",
-		       task_pid_nr(p), p->comm, cpumask_pr_args(override_mask));
+		printk_deferred("Overriding affinity for process %d (%s) to CPUs %*pbl\n",
+				task_pid_nr(p), p->comm,
+				cpumask_pr_args(override_mask));
 	}
 
 	WARN_ON(set_cpus_allowed_ptr(p, override_mask));
@@ -3456,8 +3457,8 @@ out:
 		 * leave kernel.
 		 */
 		if (p->mm && printk_ratelimit()) {
-			printk("process %d (%s) no longer affine to cpu%d\n",
-			       task_pid_nr(p), p->comm, cpu);
+			printk_deferred("process %d (%s) no longer affine to cpu%d\n",
+					task_pid_nr(p), p->comm, cpu);
 		}
 	}
 
