@@ -124,4 +124,23 @@ struct printk_message {
 	unsigned long		dropped;
 };
 
+/**
+ * struct cons_context_data - console context data
+ * @pbufs:		Buffer for storing the text
+ *
+ * Used for early boot and for per CPU data.
+ */
+struct cons_context_data {
+	struct printk_buffers		pbufs;
+};
+
+bool printk_get_next_message(struct printk_message *pmsg, u64 seq,
+			     bool is_extended, bool may_supress);
+
+#ifdef CONFIG_PRINTK
+
+void console_prepend_dropped(struct printk_message *pmsg,
+			     unsigned long dropped);
+
+#endif
 bool other_cpu_in_panic(void);
