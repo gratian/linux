@@ -2570,6 +2570,10 @@ void suspend_console(void)
 	 * completes.
 	 */
 	synchronize_srcu(&console_srcu);
+
+	console_lock();
+	console_suspended = 1;
+	up_console_sem();
 }
 
 void resume_console(void)
@@ -2578,6 +2582,9 @@ void resume_console(void)
 
 	if (!console_suspend_enabled)
 		return;
+	down_console_sem();
+	console_suspended = 0;
+	console_unlock();
 
 	console_list_lock();
 	for_each_console(con)
