@@ -2209,7 +2209,7 @@ int serial8250_do_startup(struct uart_port *port)
 	struct uart_8250_port *up = up_to_u8250p(port);
 	unsigned long cs_flags;
 	unsigned long flags;
-	unsigned char lsr, iir;
+	unsigned char iir;
 	bool is_console;
 	int retval;
 	u16 lsr;
@@ -3415,7 +3415,7 @@ void serial8250_console_write_atomic(struct uart_8250_port *up,
 	uart_console_write(port, s, count, serial8250_console_putchar_locked);
 	atomic_dec(&up->console_printing);
 
-	wait_for_xmitr(up, BOTH_EMPTY);
+	wait_for_xmitr(up, UART_LSR_BOTH_EMPTY);
 	serial8250_set_IER(up, ier);
 
 	printk_cpu_sync_put_irqrestore(flags);
