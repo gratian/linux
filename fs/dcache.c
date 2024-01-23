@@ -2538,7 +2538,13 @@ EXPORT_SYMBOL(d_rehash);
 static inline unsigned start_dir_add(struct inode *dir)
 {
 
-	preempt_disable_rt();
+        /*
+         * The caller has a spinlock_t (dentry::d_lock) acquired which disables
+         * preemption on !PREEMPT_RT. On PREEMPT_RT the lock does not disable
+         * preemption and it has be done explicitly.
+         */
+        if (IS_ENABLED(CONFIG_PREEMPT_RT))
+                preempt_disable();
 	for (;;) {
 		unsigned n = dir->__i_dir_seq;
 		if (!(n & 1) && cmpxchg(&dir->__i_dir_seq, n, n + 1) == n)
@@ -2550,7 +2556,8 @@ static inline unsigned start_dir_add(struct inode *dir)
 static inline void end_dir_add(struct inode *dir, unsigned n)
 {
 	smp_store_release(&dir->__i_dir_seq, n + 2);
-	preempt_enable_rt();
+        if (IS_ENABLED(CONFIG_PREEMPT_RT))
+                preempt_enable();
 }
 
 static void d_wait_lookup(struct dentry *dentry)
