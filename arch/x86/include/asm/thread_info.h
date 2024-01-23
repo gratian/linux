@@ -59,6 +59,9 @@ struct thread_info {
 	u32			status;		/* thread synchronous flags */
 	int			preempt_lazy_count;	/* 0 => lazy preemptable
 							   <0 => BUG */
+#ifdef CONFIG_SMP
+	u32			cpu;		/* current CPU */
+#endif
 };
 
 #define INIT_THREAD_INFO(tsk)			\
