@@ -701,6 +701,7 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
 	cons_atomic_exit(CONS_PRIO_EMERGENCY, prev_prio);
 }
 
+#ifdef CONFIG_BUG
 #ifndef __WARN_FLAGS
 void warn_slowpath_fmt(const char *file, int line, unsigned taint,
 		       const char *fmt, ...)
@@ -738,8 +739,6 @@ void __warn_printk(const char *fmt, ...)
 }
 EXPORT_SYMBOL(__warn_printk);
 #endif
-
-#ifdef CONFIG_BUG
 
 /* Support resetting WARN*_ONCE state */
 

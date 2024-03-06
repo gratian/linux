@@ -605,6 +605,8 @@ static int brcmuart_startup(struct uart_port *port)
 	/*
 	 * Disable the Receive Data Interrupt because the DMA engine
 	 * will handle this.
+	 *
+	 * Synchronize UART_IER access against the console.
 	 */
 	spin_lock_irq(&port->lock);
 	up->ier &= ~UART_IER_RDI;
