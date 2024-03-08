@@ -125,6 +125,22 @@ struct pipe_buf_operations {
 };
 
 /**
+ * pipe_has_watch_queue - Check whether the pipe is a watch_queue,
+ * i.e. it was created with O_NOTIFICATION_PIPE
+ * @pipe: The pipe to check
+ *
+ * Return: true if pipe is a watch queue, false otherwise.
+ */
+static inline bool pipe_has_watch_queue(const struct pipe_inode_info *pipe)
+{
+#ifdef CONFIG_WATCH_QUEUE
+	return pipe->watch_queue != NULL;
+#else
+	return false;
+#endif
+}
+
+/**
  * pipe_empty - Return true if the pipe is empty
  * @head: The pipe ring head pointer
  * @tail: The pipe ring tail pointer
@@ -269,10 +285,10 @@ bool pipe_is_unprivileged_user(void);
 
 /* for F_SETPIPE_SZ and F_GETPIPE_SZ */
 int pipe_resize_ring(struct pipe_inode_info *pipe, unsigned int nr_slots);
-long pipe_fcntl(struct file *, unsigned int, unsigned long arg);
+long pipe_fcntl(struct file *, unsigned int, unsigned int arg);
 struct pipe_inode_info *get_pipe_info(struct file *file, bool for_splice);
 
 int create_pipe_files(struct file **, int);
-unsigned int round_pipe_size(unsigned long size);
+unsigned int round_pipe_size(unsigned int size);
 
 #endif

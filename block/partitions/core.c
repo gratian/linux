@@ -281,10 +281,7 @@ static void delete_partition(struct block_device *part)
 	 * looked up any more even when openers still hold references.
 	 */
 	remove_inode_hash(part->bd_inode);
-
-	fsync_bdev(part);
-	__invalidate_device(part, true);
-
+	bdev_mark_dead(part, false);
 	drop_partition(part);
 }
 
@@ -458,6 +455,11 @@ int bdev_add_partition(struct gendisk *disk, int partno, sector_t start,
 
 	if (!disk_live(disk)) {
 		ret = -ENXIO;
+		goto out;
+	}
+
+	if (disk->flags & GENHD_FL_NO_PART) {
+		ret = -EINVAL;
 		goto out;
 	}
 

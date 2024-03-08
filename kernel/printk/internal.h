@@ -218,3 +218,4 @@ void console_prepend_dropped(struct printk_message *pmsg,
 			     unsigned long dropped);
 
 #endif
+bool other_cpu_in_panic(void);
