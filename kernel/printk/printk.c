@@ -361,7 +361,7 @@ static bool panic_in_progress(void)
  * paths in the console code where we end up in places I want
  * locked without the console semaphore held).
  */
-static int console_locked;
+static int console_locked, console_suspended;
 
 /*
  *	Array of consoles built from command line options (console=)
@@ -2737,25 +2737,6 @@ int is_console_locked(void)
 	return console_locked;
 }
 EXPORT_SYMBOL(is_console_locked);
-
-/*
- * Return true when this CPU should unlock console_sem without pushing all
- * messages to the console. This reduces the chance that the console is
- * locked when the panic CPU tries to use it.
- */
-static bool abandon_console_lock_in_panic(void)
-{
-	if (!panic_in_progress())
-		return false;
-
-	/*
-	 * We can use raw_smp_processor_id() here because it is impossible for
-	 * the task to be migrated to the panic_cpu, or away from it. If
-	 * panic_cpu has already been set, and we're not currently executing on
-	 * that CPU, then we never will be.
-	 */
-	return atomic_read(&panic_cpu) != raw_smp_processor_id();
-}
 
 static void __console_unlock(void)
 {
