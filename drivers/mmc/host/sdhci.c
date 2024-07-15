@@ -32,6 +32,7 @@
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/slot-gpio.h>
 
+#include "../core/host.h"
 #include "sdhci.h"
 
 #define DRIVER_NAME "sdhci"
@@ -3474,18 +3475,12 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 		host->data->error = -EILSEQ;
 		if (!mmc_op_tuning(SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND))))
 			sdhci_err_stats_inc(host, DAT_CRC);
-	} else if ((intmask & (SDHCI_INT_DATA_CRC | SDHCI_INT_TUNING_ERROR)) &&
+	} else if ((intmask & SDHCI_INT_DATA_CRC) &&
 		SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND))
 			!= MMC_BUS_TEST_R) {
 		host->data->error = -EILSEQ;
 		if (!mmc_op_tuning(SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND))))
 			sdhci_err_stats_inc(host, DAT_CRC);
-		if (intmask & SDHCI_INT_TUNING_ERROR) {
-			u16 ctrl2 = sdhci_readw(host, SDHCI_HOST_CONTROL2);
-
-			ctrl2 &= ~SDHCI_CTRL_TUNED_CLK;
-			sdhci_writew(host, ctrl2, SDHCI_HOST_CONTROL2);
-		}
 	} else if (intmask & SDHCI_INT_ADMA_ERROR) {
 		pr_err("%s: ADMA error: 0x%08x\n", mmc_hostname(host->mmc),
 		       intmask);
@@ -3577,6 +3572,12 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 
 	do {
 		DBG("IRQ status 0x%08x\n", intmask);
+		if (intmask & SDHCI_INT_TUNING_ERROR) {
+			pr_err("SDHCI_INT_TUNING_ERROR: 0x%08x\n", intmask);
+			pr_err("%s: cmd: %p, data_cmd: %p, deferred_cmd: %p, data: %p\n",
+				mmc_hostname(host->mmc), host->cmd, host->data_cmd,
+				host->deferred_cmd, host->data);
+		}
 
 		if (host->ops->irq) {
 			intmask = host->ops->irq(host, intmask);
@@ -3632,6 +3633,31 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		if (intmask & SDHCI_INT_RETUNE)
 			mmc_retune_needed(host->mmc);
 
+		if ((intmask & SDHCI_INT_TUNING_ERROR) &&
+			SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND))
+			!= MMC_BUS_TEST_R) {
+			u16 ctrl2 = sdhci_readw(host, SDHCI_HOST_CONTROL2);
+
+			pr_err("%s: tuning err irq, sdhci cmd: %u\n",
+				mmc_hostname(host->mmc),
+				SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND)));
+
+			if (host->data)
+				host->data->error = -EILSEQ;
+			else if (host->cmd)
+				host->cmd->error = -EILSEQ;
+			else if (host->data_cmd)
+				host->data_cmd->error = -EILSEQ;
+
+			if (!mmc_op_tuning(SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND))))
+				sdhci_err_stats_inc(host, TUNING);
+
+			ctrl2 &= ~SDHCI_CTRL_TUNED_CLK;
+			sdhci_writew(host, ctrl2, SDHCI_HOST_CONTROL2);
+			sdhci_writel(host, SDHCI_INT_TUNING_ERROR,
+				SDHCI_INT_STATUS);
+		}
+
 		if ((intmask & SDHCI_INT_CARD_INT) &&
 		    (host->ier & SDHCI_INT_CARD_INT)) {
 			sdhci_enable_sdio_irq_nolock(host, false);
@@ -3641,7 +3667,8 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		intmask &= ~(SDHCI_INT_CARD_INSERT | SDHCI_INT_CARD_REMOVE |
 			     SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK |
 			     SDHCI_INT_ERROR | SDHCI_INT_BUS_POWER |
-			     SDHCI_INT_RETUNE | SDHCI_INT_CARD_INT);
+			     SDHCI_INT_RETUNE | SDHCI_INT_CARD_INT |
+			     SDHCI_INT_TUNING_ERROR);
 
 		if (intmask) {
 			unexpected |= intmask;
@@ -4020,7 +4047,7 @@ bool sdhci_cqe_irq(struct sdhci_host *host, u32 intmask, int *cmd_error,
 	} else
 		*cmd_error = 0;
 
-	if (intmask & (SDHCI_INT_DATA_END_BIT | SDHCI_INT_DATA_CRC | SDHCI_INT_TUNING_ERROR)) {
+	if (intmask & (SDHCI_INT_DATA_END_BIT | SDHCI_INT_DATA_CRC)) {
 		*data_error = -EILSEQ;
 		if (!mmc_op_tuning(SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND))))
 			sdhci_err_stats_inc(host, DAT_CRC);
@@ -4032,6 +4059,15 @@ bool sdhci_cqe_irq(struct sdhci_host *host, u32 intmask, int *cmd_error,
 		sdhci_err_stats_inc(host, ADMA);
 	} else
 		*data_error = 0;
+
+	if (intmask & SDHCI_INT_TUNING_ERROR) {
+		if (host->data)
+			*data_error = -EILSEQ;
+		else
+			*cmd_error = -EILSEQ;
+		if (!mmc_op_tuning(SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND))))
+			sdhci_err_stats_inc(host, TUNING);
+	}
 
 	/* Clear selected interrupts. */
 	mask = intmask & host->cqe_ier;

@@ -147,8 +147,10 @@ void mmc_request_done(struct mmc_host *host, struct mmc_request *mrq)
 	    !host->retune_crc_disable &&
 	    (err == -EILSEQ || (mrq->sbc && mrq->sbc->error == -EILSEQ) ||
 	    (mrq->data && mrq->data->error == -EILSEQ) ||
-	    (mrq->stop && mrq->stop->error == -EILSEQ)))
+	    (mrq->stop && mrq->stop->error == -EILSEQ))) {
 		mmc_retune_needed(host);
+		pr_err("%s: mmc_request_done: mmc_retune_needed\n", mmc_hostname(host));
+	}
 
 	if (err && cmd->retries && mmc_host_is_spi(host)) {
 		if (cmd->resp[0] & R1_SPI_ILLEGAL_COMMAND)
