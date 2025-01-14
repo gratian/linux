@@ -14,6 +14,7 @@
 #include <linux/irqflags.h>
 #include <linux/hrtimer.h>
 #include <linux/kref.h>
+#include <linux/wait.h>
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 
