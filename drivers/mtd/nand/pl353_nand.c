@@ -1322,7 +1322,7 @@ static int pl353_nand_remove(struct platform_device *pdev)
 	struct pl353_nand_info *xnand = platform_get_drvdata(pdev);
 
 	/* Release resources, unregister device */
-	nand_release(&xnand->chip.mtd);
+	nand_release(&xnand->chip);
 	/* kfree(NULL) is safe */
 	kfree(xnand->parts);
 
