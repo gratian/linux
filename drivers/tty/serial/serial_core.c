@@ -31,6 +31,7 @@
 
 #include <linux/irq.h>
 #include <linux/uaccess.h>
+#include <linux/platform_device.h>
 
 #include "serial_base.h"
 
@@ -3395,6 +3396,7 @@ int serial_core_register_port(struct uart_driver *drv, struct uart_port *port)
 {
 	struct serial_ctrl_device *ctrl_dev, *new_ctrl_dev = NULL;
 	int ret;
+	bool is_niserial987x = false;
 
 	mutex_lock(&port_mutex);
 
@@ -3403,6 +3405,25 @@ int serial_core_register_port(struct uart_driver *drv, struct uart_port *port)
 	 * until serial_core_add_one_port() has completed
 	 */
 	port->flags |= UPF_DEAD;
+
+	if (port->dev == NULL) {
+		if (strncmp(drv->driver_name, "niserial987x", 12) == 0) {
+			struct platform_device *pdev;
+
+			pdev = platform_device_register_simple(drv->driver_name,
+							-1, NULL, 0);
+			if (PTR_ERR_OR_ZERO(pdev)) {
+				ret = -EINVAL;
+				goto err_unlock;
+			}
+
+			port->dev = &pdev->dev;
+			is_niserial987x = true;
+		} else {
+			ret = -EINVAL;
+			goto err_unlock;
+		}
+	}
 
 	/* Inititalize a serial core controller device if needed */
 	ctrl_dev = serial_core_ctrl_find(drv, port->dev, port->ctrl_id);
@@ -3441,6 +3462,10 @@ err_unregister_ctrl_dev:
 	serial_base_ctrl_device_remove(new_ctrl_dev);
 
 err_unlock:
+	/* Remove the platform_device created for niserial987xDriver */
+	if (is_niserial987x)
+		platform_device_del(to_platform_device(port->dev));
+
 	mutex_unlock(&port_mutex);
 
 	return ret;
@@ -3469,6 +3494,10 @@ void serial_core_unregister_port(struct uart_driver *drv, struct uart_port *port
 	/* Drop the serial core controller device if no ports are using it */
 	if (!serial_core_ctrl_find(drv, phys_dev, ctrl_id))
 		serial_base_ctrl_device_remove(ctrl_dev);
+
+	/* Remove the platform_device created for niserial987xDriver */
+	if (strncmp(drv->driver_name, "niserial987x", 12) == 0)
+		platform_device_del(to_platform_device(phys_dev));
 
 	mutex_unlock(&port_mutex);
 }
